@@ -7,6 +7,8 @@ const precioImportacion = document.getElementById('importacion')
 const paypal = document.getElementById('paypal');
 const importbool = false;
 
+
+
 class Tax{
     constructor(name, pct, etc){
         this.name = name
@@ -54,6 +56,7 @@ PERCEPCION.getTaxedValue = (price) => {
 form.addEventListener('submit', (e) => {
     e.preventDefault();
     let value = parseFloat(precio.value);
+    const unalteredValue = value
     const costoImportacion = parseFloat(precioImportacion.value) ? parseFloat(precioImportacion.value) : 0
     value += costoImportacion
     const usingPaypal = paypal.checked
@@ -69,46 +72,60 @@ form.addEventListener('submit', (e) => {
 
     if(!showInCascade){
     outputElement.innerHTML = `
-    CON ${PAIS.name} (${PAIS.getPctString()}): ${PAIS.getValuePlusTaxesString(value)}$ (AFIP chorea: ${PAIS.getTaxedValue(value)}$)<br>
-    CON ${PERCEPCION.name} (${PERCEPCION.getPctString()}): ${PERCEPCION.getValuePlusTaxesString(value)}$ (AFIP chorea: ${PERCEPCION.getTaxedValue(value)}$)<br>
-    TOTAL APROXIMADO: ${internetPaid}$ (AFIP chorea: ${accumulatedTaxes}$)
+    CON ${PAIS.name} (${PAIS.getPctString()}): ${PAIS.getValuePlusTaxesString(value)}$ (${PAIS.getTaxedValue(value)}$)<br>
+    CON ${PERCEPCION.name} (${PERCEPCION.getPctString()}): ${PERCEPCION.getValuePlusTaxesString(value)}$ (${PERCEPCION.getTaxedValue(value)}$)<br><br>
+    TOTAL APROXIMADO COMPRA ONLINE: ${internetPaid}$
 
     `
     }else{
         outputElement.innerHTML = `
         + ${PAIS.name} (${PAIS.getPctString()}): ${PAIS.getValuePlusTaxesString(value)}$<br>
-        + ${PERCEPCION.name} (${value < 300 ? PERCEPCION.getPctString() : PERCEPCION.etc.masDe300USD + PERCEPCION.pct + '%'}): ${value + PERCEPCION.getTaxedValue(value) + PAIS.getTaxedValue(value)}$<br>
-        TOTAL APROXIMADO: ${internetPaid}$
+        + ${PERCEPCION.name} (${value < 300 ? PERCEPCION.getPctString() : PERCEPCION.etc.masDe300USD + PERCEPCION.pct + '%'}): ${value + PERCEPCION.getTaxedValue(value) + PAIS.getTaxedValue(value)}$<br><br>
+        TOTAL APROXIMADO COMPRA ONLINE: ${internetPaid}$
 
         `
     };
 
-
-
     if(importarBool){
-        const productValue = value - costoImportacion
-        const importingTax = getCustomsTaxes(productValue)
+        const importingTax = getCustomsTaxes(unalteredValue)
         const totalImporting = importingTax + internetPaid
-        if(productValue <= 50){
-            outputElement.innerHTML += `
-        <br><br><br> Menor o igual a 50 USD no paga impuestos de aduana!
+        const totalTaxes = accumulatedTaxes + importingTax
+        if(unalteredValue <= 50){
+            return outputElement.innerHTML += `
+        <br><br><br>Primeras 12 compras del año menor o igual a 50 USD no pagan impuestos de aduana!
         `
     }
         else{
             if(!showInCascade){
                 outputElement.innerHTML += `<br><br><br>
             
-                CON DERECHO A LA IMPORTACIÓN (50% sobre el excedente de 50USD): ${productValue + importingTax}$ (AFIP chorea: ${importingTax}$)<br>
-                TOTAL APROXIMADO IMPORTANDO: ${totalImporting}$ (AFIP chorea: ${accumulatedTaxes + importingTax}$)
+                CON DERECHO A LA IMPORTACIÓN (50% sobre el excedente de 50USD): ${unalteredValue + importingTax}$ (${importingTax}$)<br><br>
+                TOTAL APROXIMADO IMPORTANDO: ${totalImporting}$ (${totalTaxes}$)
                 `
             }else{
                 outputElement.innerHTML += `<br><br><br>
             
-                + DERECHO A LA IMPORTACIÓN (50% sobre el excedente de 50USD): ${totalImporting}$<br>
+                + DERECHO A LA IMPORTACIÓN (50% sobre el excedente de 50USD): ${totalImporting}$<br><br>
                 TOTAL APROXIMADO IMPORTANDO: ${totalImporting}$
                 `
             }
+            
         }
+
+        const porcentajeAduanero = getPercentageNumber(unalteredValue, importingTax)
+
+        outputElement.innerHTML += `<br><br>
+        Total impuestos aduana: ${importingTax}$<br>
+        Porcentaje de impuesto aduanero: ${porcentajeAduanero}%<br><br>
+        TOTAL IMPUESTOS: ${totalTaxes}$<br><br><br>
+        `
+
+        if(accumulatedTaxes + importingTax > unalteredValue) outputElement.innerHTML += `
+        ESTAS PAGANDO MAS IMPUESTOS QUE PRODUCTO
+        `
+
+    }else{
+        outputElement.innerHTML += `<br><br>Total impuestos: ${accumulatedTaxes}$`
     }
 })
 
@@ -126,4 +143,8 @@ function sumPercentage(value, percentage) {
 
 function getPercentage(value, percentage){
     return (value * percentage) / 100
+}
+
+function getPercentageNumber(percentedValue, comparedValue){
+    return (comparedValue * 100) / percentedValue
 }
